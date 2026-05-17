@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background: rounded square in light blue -->
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="#1e88e5"/>
+
+  <!-- Soft inner glow ring -->
+  <rect x="48" y="48" width="928" height="928" rx="190" ry="190"
+        fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="6"/>
+
+  <!-- Eye outline (almond shape) -->
+  <path d="M 180 512
+           C 320 240, 704 240, 844 512
+           C 704 784, 320 784, 180 512 Z"
+        fill="none" stroke="#ffffff" stroke-width="44" stroke-linejoin="round"/>
+
+  <!-- Iris -->
+  <circle cx="512" cy="512" r="150" fill="#ffffff"/>
+
+  <!-- Pupil -->
+  <circle cx="512" cy="512" r="78" fill="#0d3f70"/>
+
+  <!-- Catch-light (specular highlight) -->
+  <circle cx="556" cy="468" r="22" fill="#ffffff"/>
+</svg>

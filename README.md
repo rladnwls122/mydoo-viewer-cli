@@ -95,10 +95,7 @@ cd src-tauri && cargo tauri dev
 cd src-tauri && cargo tauri build
 ```
 
-Artifacts:
-
-- `src-tauri/target/release/mydoo-viewer.exe` — standalone executable
-- `src-tauri/target/release/bundle/nsis/Mydoo Viewer_0.1.0_x64-setup.exe` — installer
+Artifact: `src-tauri/target/release/bundle/nsis/Mydoo Viewer_<version>_x64-setup.exe`
 
 ---
 

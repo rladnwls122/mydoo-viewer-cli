@@ -50,11 +50,11 @@ MIT 라이선스로 공개되어 있으니 마음껏 활용해 주십시오. 추
 | `.html`, `.htm` | Sanitized via DOMPurify (scripts and iframes blocked) |
 | `.txt` | Monospace plain text |
 | `.docx` | Converted to HTML via mammoth.js |
-| `.hwpx` | Rich HTML via `@ssabrojs/hwpxjs` (tables, font sizes, paragraphs preserved) — bundled as a Bun-compiled sidecar |
-| `.hwp` | Text extraction via Rust CFB + HWP 5.0 records (rich formatting deferred to v0.3) |
+| `.hwpx` | Rich HTML via `@ssabrojs/hwpxjs` — tables, font sizes, colors, paragraphs, embedded images (base64-inlined via JSZip) all preserved. Bundled as a Bun-compiled sidecar. |
+| `.hwp` | Text extraction via Rust CFB + HWP 5.0 records, with PrvText fallback and partial-deflate recovery. Some legacy `.hwp` variants whose body stream is corrupted or uses a non-standard layout cannot be opened — open them in Hancom Office or convert to `.hwpx`. Rich `.hwp` rendering is planned for v0.3. |
 
-> Embedded images inside `.hwpx` reference `BinData/*` inside the archive; surfacing them is scheduled for v0.2.x.
-> `.hwpx` 안의 첨부 이미지는 아카이브 내부 `BinData/*` 를 참조합니다. 이미지 표시는 v0.2.x 에서 보강 예정입니다.
+> The `.hwpx` body is always rendered on a light page (white background, dark text) — the dark/light toggle applies to the UI shell only, so original colors, highlights, and backgrounds in the document are preserved faithfully. (Same pattern as Word / Hancom / Google Docs.)
+> `.hwpx` 본문은 항상 라이트 페이지(흰 배경 + 어두운 글자)로 표시됩니다. 다크/라이트 토글은 UI 셸에만 적용되며, 문서 안의 원본 색·하이라이트·배경은 그대로 보존됩니다. (워드 · 한컴 · 구글닥스와 같은 방식)
 
 ---
 

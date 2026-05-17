@@ -1,0 +1,183 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #57606a;
+  --border: #d0d7de;
+  --sidebar-bg: #f6f8fa;
+  --hover: #eaeef2;
+  --active: #ddf4ff;
+  --accent: #0969da;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #8d96a0;
+    --border: #30363d;
+    --sidebar-bg: #161b22;
+    --hover: #1f242c;
+    --active: #1f3a55;
+    --accent: #58a6ff;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "맑은 고딕",
+    "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: 100vh;
+}
+
+body.no-sidebar {
+  grid-template-columns: 0 1fr;
+}
+body.no-sidebar #sidebar { display: none; }
+
+#sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sidebar-head {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.path {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow: auto;
+  flex: 1;
+}
+
+.tree li {
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tree li:hover { background: var(--hover); }
+.tree li.active { background: var(--active); }
+
+.tree li .icon {
+  width: 1em;
+  flex: 0 0 auto;
+  text-align: center;
+  opacity: 0.85;
+}
+
+#main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#topbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.current {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+button.ghost:hover { background: var(--hover); border-color: var(--border); }
+
+#viewer {
+  overflow: auto;
+  padding: 32px 48px;
+  flex: 1;
+}
+
+#viewer.empty { display: grid; place-items: center; }
+
+.welcome {
+  max-width: 480px;
+  text-align: center;
+  color: var(--muted);
+}
+.welcome h1 { color: var(--fg); margin: 0 0 16px; }
+.welcome p { margin: 8px 0; }
+.welcome code {
+  background: var(--sidebar-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.muted { color: var(--muted); }
+
+.markdown-body { background: transparent !important; color: var(--fg); }
+
+.viewer.plain pre {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Cascadia Code", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.error {
+  color: #d1242f;
+  background: rgba(255, 100, 100, 0.08);
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid #d1242f55;
+  margin: 12px 0;
+}

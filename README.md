@@ -19,7 +19,7 @@ An era where beautiful documents are written without Word.
 
 **Mydoo Viewer** is a lightweight viewer for this new era.
 
-Mydoo Viewer is released under the **MIT License** — please use it freely. If there is anything you would like to see added, please email **cashmapworkers@gmail.com**. We welcome your suggestions.
+Mydoo Viewer is released under the **MIT License** — please use it freely. If there is anything you would like to see added, please email **young@mydoo.ai**. We welcome your suggestions.
 
 ---
 
@@ -38,7 +38,7 @@ Word 없이도 훌륭한 문서를 만들 수 있는 시대.
 
 **마이두 뷰어(Mydoo Viewer)** 는 그 시대에 어울리는 경량 뷰어입니다.
 
-MIT 라이선스로 공개되어 있으니 마음껏 활용해 주십시오. 추가하고 싶은 기능이나 의견이 있으시면 **cashmapworkers@gmail.com** 으로 메일 부탁드립니다. 의견을 기쁘게 받겠습니다.
+MIT 라이선스로 공개되어 있으니 마음껏 활용해 주십시오. 추가하고 싶은 기능이나 의견이 있으시면 **young@mydoo.ai** 으로 메일 부탁드립니다. 의견을 기쁘게 받겠습니다.
 
 ---
 
@@ -122,5 +122,5 @@ MIT — see [LICENSE](LICENSE).
 
 ## Contact · 연락
 
-Questions, feedback, feature requests: **cashmapworkers@gmail.com**
-문의·피드백·기능 요청: **cashmapworkers@gmail.com**
+Questions, feedback, feature requests: **young@mydoo.ai**
+문의·피드백·기능 요청: **young@mydoo.ai**

@@ -22,6 +22,34 @@
   }
 }
 
+body.theme-light {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #57606a;
+  --border: #d0d7de;
+  --sidebar-bg: #f6f8fa;
+  --hover: #eaeef2;
+  --active: #ddf4ff;
+  --accent: #0969da;
+  color-scheme: light;
+}
+
+body.theme-dark {
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --muted: #8d96a0;
+  --border: #30363d;
+  --sidebar-bg: #161b22;
+  --hover: #1f242c;
+  --active: #1f3a55;
+  --accent: #58a6ff;
+  color-scheme: dark;
+}
+
+/* github-markdown-css도 강제 테마 따라가게 */
+body.theme-dark .markdown-body { color-scheme: dark; }
+body.theme-light .markdown-body { color-scheme: light; }
+
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
@@ -40,7 +68,7 @@ body {
 }
 
 body.no-sidebar {
-  grid-template-columns: 0 1fr;
+  grid-template-columns: 1fr;
 }
 body.no-sidebar #sidebar { display: none; }
 
@@ -59,6 +87,7 @@ body.no-sidebar #sidebar { display: none; }
   padding: 8px;
   border-bottom: 1px solid var(--border);
 }
+.sidebar-head .theme-btn { margin-left: auto; }
 
 .path {
   padding: 6px 10px;

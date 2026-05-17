@@ -1,9 +1,7 @@
-// 마이두 뷰어 — frontend logic
-// Tauri command bridge via __TAURI__.core.invoke
-
+// Mydoo Viewer — frontend logic
 const invoke = window.__TAURI__.core.invoke;
-
 const $ = (sel) => document.querySelector(sel);
+
 const tree = $("#tree");
 const viewer = $("#viewer");
 const currentFileLabel = $("#current-file");
@@ -12,12 +10,7 @@ const sidebarPath = $("#sidebar-path");
 let currentDir = null;
 let currentFile = null;
 
-marked.setOptions({
-  gfm: true,
-  breaks: false,
-  headerIds: true,
-  mangle: false,
-});
+marked.setOptions({ gfm: true, breaks: false, headerIds: true, mangle: false });
 
 const FILE_ICON = {
   md: "📝", markdown: "📝",
@@ -27,45 +20,60 @@ const FILE_ICON = {
   hwp: "📕", hwpx: "📕",
 };
 const folderIcon = "📁";
+const driveIcon = "💾";
 
-function iconFor(name, isDir) {
-  if (isDir) return folderIcon;
-  const ext = name.split(".").pop().toLowerCase();
+function iconFor(entry) {
+  if (entry.is_dir) {
+    if (/^[A-Za-z]:\\?$/.test(entry.path)) return driveIcon;
+    return folderIcon;
+  }
+  const ext = entry.name.split(".").pop().toLowerCase();
   return FILE_ICON[ext] || "📄";
 }
 
-async function loadTree(dir) {
+function renderTree(entries) {
+  tree.innerHTML = "";
+  for (const e of entries) {
+    const li = document.createElement("li");
+    li.dataset.path = e.path;
+    li.dataset.isDir = e.is_dir;
+    const icon = document.createElement("span");
+    icon.className = "icon";
+    icon.textContent = iconFor(e);
+    const label = document.createElement("span");
+    label.className = "name";
+    label.textContent = e.name;
+    li.appendChild(icon);
+    li.appendChild(label);
+    li.addEventListener("click", () => {
+      if (e.is_dir) loadDir(e.path);
+      else {
+        openFile(e.path);
+        markActive(li);
+      }
+    });
+    tree.appendChild(li);
+  }
+}
+
+async function loadDir(dir) {
   try {
     const entries = await invoke("list_dir", { path: dir });
     currentDir = dir;
     sidebarPath.textContent = dir;
     sidebarPath.title = dir;
-    tree.innerHTML = "";
-    for (const e of entries) {
-      const li = document.createElement("li");
-      li.dataset.path = e.path;
-      li.dataset.isDir = e.is_dir;
-      const icon = document.createElement("span");
-      icon.className = "icon";
-      icon.textContent = iconFor(e.name, e.is_dir);
-      const label = document.createElement("span");
-      label.className = "name";
-      label.textContent = e.name;
-      li.appendChild(icon);
-      li.appendChild(label);
-      li.addEventListener("click", () => {
-        if (e.is_dir) {
-          loadTree(e.path);
-        } else {
-          openFile(e.path);
-          markActive(li);
-        }
-      });
-      tree.appendChild(li);
-    }
+    renderTree(entries);
   } catch (err) {
     showError(`폴더를 읽을 수 없음: ${err}`);
   }
+}
+
+async function loadDrives() {
+  const drives = await invoke("list_drives");
+  currentDir = null;
+  sidebarPath.textContent = "내 PC";
+  sidebarPath.title = "";
+  renderTree(drives);
 }
 
 function markActive(li) {
@@ -77,7 +85,7 @@ async function openFile(path) {
   try {
     currentFile = path;
     currentFileLabel.textContent = path;
-    document.title = `${baseName(path)} — 마이두 뷰어`;
+    document.title = `${baseName(path)} — Mydoo Viewer`;
     const file = await invoke("read_file", { path });
     renderFile(file);
   } catch (err) {
@@ -94,17 +102,14 @@ function renderFile(file) {
     viewer.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ["target"] });
     return;
   }
-
   if (kind === "html") {
-    const sanitized = DOMPurify.sanitize(content, {
+    viewer.innerHTML = DOMPurify.sanitize(content, {
       ADD_ATTR: ["target"],
       FORBID_TAGS: ["script", "iframe", "object", "embed", "link"],
       FORBID_ATTR: ["onerror", "onload", "onclick"],
     });
-    viewer.innerHTML = sanitized;
     return;
   }
-
   if (kind === "text") {
     viewer.classList.add("plain");
     viewer.innerHTML = "";
@@ -113,17 +118,13 @@ function renderFile(file) {
     viewer.appendChild(pre);
     return;
   }
-
   if (kind === "docx") {
     const bytes = base64ToBytes(content);
     mammoth.convertToHtml({ arrayBuffer: bytes.buffer }).then((result) => {
       viewer.innerHTML = DOMPurify.sanitize(result.value);
-    }).catch((e) => {
-      showError(`docx 변환 실패: ${e}`);
-    });
+    }).catch((e) => showError(`docx 변환 실패: ${e}`));
     return;
   }
-
   if (kind === "hwp" || kind === "hwpx") {
     viewer.classList.add("plain");
     viewer.innerHTML = "";
@@ -132,7 +133,6 @@ function renderFile(file) {
     viewer.appendChild(pre);
     return;
   }
-
   showError(`알 수 없는 포맷: ${kind}`);
 }
 
@@ -153,38 +153,8 @@ function showError(msg) {
 }
 
 function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-
-// 버튼들
-$("#btn-open-folder").addEventListener("click", async () => {
-  const path = await invoke("open_dir_dialog");
-  if (path) loadTree(path);
-});
-
-$("#btn-open-file").addEventListener("click", async () => {
-  const path = await invoke("open_file_dialog");
-  if (path) {
-    const parent = await invoke("parent_dir", { path });
-    if (parent) await loadTree(parent);
-    await openFile(path);
-    highlightInTree(path);
-  }
-});
-
-$("#btn-up").addEventListener("click", async () => {
-  if (!currentDir) return;
-  const parent = await invoke("parent_dir", { path: currentDir });
-  if (parent && parent !== currentDir) loadTree(parent);
-});
-
-$("#btn-toggle-sidebar").addEventListener("click", () => {
-  document.body.classList.toggle("no-sidebar");
-});
 
 function highlightInTree(path) {
   for (const li of tree.querySelectorAll("li")) {
@@ -196,28 +166,72 @@ function highlightInTree(path) {
   }
 }
 
-// 키 바인딩
+async function openSidebarWithDefault() {
+  // 사이드바 열릴 때 기본 진입점 — 홈
+  if (!currentDir) {
+    const home = await invoke("home_dir");
+    if (home) await loadDir(home);
+    else await loadDrives();
+  }
+}
+
+// 헤더 버튼 — 사이드바 토글
+$("#btn-toggle-sidebar").addEventListener("click", async () => {
+  const closed = document.body.classList.toggle("no-sidebar");
+  if (!closed) await openSidebarWithDefault();
+});
+
+// 사이드바 내부 버튼
+$("#btn-home").addEventListener("click", async () => {
+  const home = await invoke("home_dir");
+  if (home) loadDir(home);
+});
+
+$("#btn-drives").addEventListener("click", () => loadDrives());
+
+$("#btn-up").addEventListener("click", async () => {
+  if (!currentDir) return;
+  const parent = await invoke("parent_dir", { path: currentDir });
+  if (parent && parent !== currentDir) loadDir(parent);
+  else loadDrives();
+});
+
+// 테마 토글
+function currentTheme() {
+  if (document.body.classList.contains("theme-dark")) return "dark";
+  if (document.body.classList.contains("theme-light")) return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function applyTheme(theme) {
+  document.body.classList.remove("theme-light", "theme-dark");
+  if (theme === "light") document.body.classList.add("theme-light");
+  else if (theme === "dark") document.body.classList.add("theme-dark");
+  $("#btn-theme").textContent = currentTheme() === "dark" ? "☀️" : "🌙";
+}
+applyTheme(localStorage.getItem("theme"));
+$("#btn-theme").addEventListener("click", () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  localStorage.setItem("theme", next);
+  applyTheme(next);
+});
+
+// 키바인딩
 document.addEventListener("keydown", (e) => {
   const ctrl = e.ctrlKey || e.metaKey;
   if (!ctrl) return;
   if (e.key.toLowerCase() === "b") {
     e.preventDefault();
-    document.body.classList.toggle("no-sidebar");
-  } else if (e.key.toLowerCase() === "o") {
-    e.preventDefault();
-    $("#btn-open-file").click();
-  } else if (e.key.toLowerCase() === "k") {
-    e.preventDefault();
-    $("#btn-open-folder").click();
+    $("#btn-toggle-sidebar").click();
   }
 });
 
-// 시작 시: 더블클릭으로 들어온 파일이 있으면 그걸 연다
+// 시작: 더블클릭으로 들어온 파일이 있으면 그 부모를 사이드바에 띄우고 파일 연다 (사이드바 자동 펼침)
 (async () => {
   const initial = await invoke("initial_file");
   if (initial) {
+    document.body.classList.remove("no-sidebar");
     const parent = await invoke("parent_dir", { path: initial });
-    if (parent) await loadTree(parent);
+    if (parent) await loadDir(parent);
     await openFile(initial);
     highlightInTree(initial);
   }

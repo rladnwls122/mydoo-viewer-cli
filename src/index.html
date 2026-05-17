@@ -3,16 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>마이두 뷰어</title>
+    <title>Mydoo Viewer</title>
     <link rel="stylesheet" href="lib/github-markdown.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <aside id="sidebar" aria-label="폴더 트리">
+  <body class="no-sidebar">
+    <aside id="sidebar" aria-label="탐색기">
       <div class="sidebar-head">
-        <button id="btn-open-folder" class="ghost" title="폴더 열기 (Ctrl+K)">📂 폴더</button>
-        <button id="btn-open-file" class="ghost" title="파일 열기 (Ctrl+O)">📄 파일</button>
+        <button id="btn-home" class="ghost" title="홈">🏠</button>
+        <button id="btn-drives" class="ghost" title="드라이브 목록">💾</button>
         <button id="btn-up" class="ghost" title="상위 폴더">⬆</button>
+        <button id="btn-theme" class="ghost theme-btn" title="다크/라이트 전환">🌙</button>
       </div>
       <div id="sidebar-path" class="path" title=""></div>
       <ul id="tree" class="tree"></ul>
@@ -20,13 +21,13 @@
 
     <main id="main">
       <header id="topbar">
-        <button id="btn-toggle-sidebar" class="ghost" title="사이드바 토글 (Ctrl+B)">☰</button>
+        <button id="btn-toggle-sidebar" class="ghost" title="탐색기 (Ctrl+B)">📁 탐색기</button>
         <div id="current-file" class="current"></div>
       </header>
       <article id="viewer" class="markdown-body viewer empty">
         <div class="welcome">
-          <h1>마이두 뷰어</h1>
-          <p>좌측 <b>📂 폴더</b>로 폴더를 열거나 <b>📄 파일</b>로 직접 파일을 열어보세요.</p>
+          <h1>Mydoo Viewer</h1>
+          <p>좌상단 <b>📁 탐색기</b>를 눌러 사이드바를 열거나, 탐색기에서 파일을 더블클릭하세요.</p>
           <p class="muted">지원: <code>.md</code> · <code>.html</code> · <code>.txt</code> · <code>.docx</code> · <code>.hwp</code> · <code>.hwpx</code></p>
         </div>
       </article>

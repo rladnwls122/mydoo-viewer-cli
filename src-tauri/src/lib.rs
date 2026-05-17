@@ -74,6 +74,40 @@ fn parent_dir(path: String) -> Option<String> {
 }
 
 #[tauri::command]
+fn list_drives() -> Vec<Entry> {
+    let mut out = Vec::new();
+    #[cfg(windows)]
+    {
+        for letter in b'A'..=b'Z' {
+            let p = format!("{}:\\", letter as char);
+            if std::path::Path::new(&p).is_dir() {
+                out.push(Entry {
+                    name: format!("{}:", letter as char),
+                    path: p,
+                    is_dir: true,
+                });
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        out.push(Entry {
+            name: "/".into(),
+            path: "/".into(),
+            is_dir: true,
+        });
+    }
+    out
+}
+
+#[tauri::command]
+fn home_dir() -> Option<String> {
+    std::env::var("USERPROFILE")
+        .ok()
+        .or_else(|| std::env::var("HOME").ok())
+}
+
+#[tauri::command]
 fn read_file(path: String) -> Result<OpenedFile, String> {
     let p = PathBuf::from(&path);
     let kind = ext_kind(&p).ok_or_else(|| format!("Unsupported file: {}", path))?;
@@ -159,30 +193,22 @@ fn decode_utf16_be(bytes: &[u8]) -> String {
 }
 
 #[tauri::command]
-fn open_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+async fn open_file_dialog(app: tauri::AppHandle) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
-    let (tx, rx) = std::sync::mpsc::channel();
     app.dialog()
         .file()
         .add_filter("문서", &["md", "markdown", "html", "htm", "txt", "docx", "hwp", "hwpx"])
-        .pick_file(move |path| {
-            let _ = tx.send(path);
-        });
-    let picked = rx.recv().map_err(|e| e.to_string())?;
-    Ok(picked.and_then(|p| p.into_path().ok().map(|pb| pb.to_string_lossy().to_string())))
+        .blocking_pick_file()
+        .and_then(|p| p.into_path().ok().map(|pb| pb.to_string_lossy().to_string()))
 }
 
 #[tauri::command]
-fn open_dir_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+async fn open_dir_dialog(app: tauri::AppHandle) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
-    let (tx, rx) = std::sync::mpsc::channel();
     app.dialog()
         .file()
-        .pick_folder(move |path| {
-            let _ = tx.send(path);
-        });
-    let picked = rx.recv().map_err(|e| e.to_string())?;
-    Ok(picked.and_then(|p| p.into_path().ok().map(|pb| pb.to_string_lossy().to_string())))
+        .blocking_pick_folder()
+        .and_then(|p| p.into_path().ok().map(|pb| pb.to_string_lossy().to_string()))
 }
 
 #[tauri::command]
@@ -215,6 +241,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_dir,
             parent_dir,
+            list_drives,
+            home_dir,
             read_file,
             open_file_dialog,
             open_dir_dialog,

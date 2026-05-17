@@ -9,38 +9,72 @@ pub fn extract_text(path: &Path) -> Result<String, String> {
 
     let compressed = is_compressed(&mut comp)?;
 
-    let section_paths: Vec<String> = comp
+    // 모든 스트림 path 수집 — 폴백 + 진단용
+    let all_paths: Vec<String> = comp
         .walk()
-        .filter_map(|entry| {
-            let p = entry.path().to_string_lossy().to_string();
-            if p.starts_with("/BodyText/Section") || p.starts_with("/ViewText/Section") {
-                Some(p)
-            } else {
-                None
-            }
-        })
+        .map(|e| e.path().to_string_lossy().to_string())
         .collect();
-    let mut sorted = section_paths;
-    sorted.sort();
-    if sorted.is_empty() {
-        return Err("hwp 안에 Section 스트림이 없음".into());
+
+    // 1) 본문 Section 스트림 — 케이스/슬래시/위치 변형 다 잡기
+    let mut section_paths: Vec<String> = all_paths
+        .iter()
+        .filter(|p| {
+            let lower = p.to_lowercase();
+            (lower.contains("bodytext") || lower.contains("viewtext"))
+                && lower.contains("section")
+        })
+        .cloned()
+        .collect();
+    section_paths.sort();
+
+    if !section_paths.is_empty() {
+        let mut out = String::new();
+        for path in section_paths {
+            let mut stream = comp.open_stream(&path).map_err(|e| e.to_string())?;
+            let mut raw = Vec::new();
+            stream.read_to_end(&mut raw).map_err(|e| e.to_string())?;
+            let bytes = if compressed { inflate(&raw)? } else { raw };
+            let text = parse_section_records(&bytes);
+            out.push_str(&text);
+            out.push('\n');
+        }
+        return Ok(out);
     }
 
-    let mut out = String::new();
-    for path in sorted {
-        let mut stream = comp.open_stream(&path).map_err(|e| e.to_string())?;
+    // 2) PrvText 폴백 — 거의 모든 hwp에 있는 미리보기 텍스트 (UTF-16LE 평문)
+    if let Some(prv_path) = all_paths
+        .iter()
+        .find(|p| p.to_lowercase().ends_with("prvtext"))
+    {
+        let mut stream = comp.open_stream(prv_path).map_err(|e| e.to_string())?;
         let mut raw = Vec::new();
         stream.read_to_end(&mut raw).map_err(|e| e.to_string())?;
-        let bytes = if compressed {
-            inflate(&raw)?
-        } else {
-            raw
-        };
-        let text = parse_section_records(&bytes);
-        out.push_str(&text);
-        out.push('\n');
+        let text = decode_utf16_le_local(&raw);
+        return Ok(format!(
+            "{}\n\n— (본문 Section 스트림을 찾지 못해 미리보기 텍스트만 추출했습니다. 전체 본문은 한컴오피스로 열어 주세요.)",
+            text
+        ));
     }
-    Ok(out)
+
+    // 3) 진단 — 실제 스트림 목록을 같이 노출
+    Err(format!(
+        "hwp 안에서 본문(BodyText/Section, ViewText/Section)도 미리보기(PrvText)도 찾지 못했습니다.\n\n스트림 목록:\n  {}",
+        all_paths.join("\n  ")
+    ))
+}
+
+fn decode_utf16_le_local(bytes: &[u8]) -> String {
+    let mut units = Vec::with_capacity(bytes.len() / 2);
+    let mut i = 0;
+    while i + 1 < bytes.len() {
+        let u = u16::from_le_bytes([bytes[i], bytes[i + 1]]);
+        if u == 0 {
+            break;
+        }
+        units.push(u);
+        i += 2;
+    }
+    String::from_utf16_lossy(&units)
 }
 
 fn is_compressed(comp: &mut cfb::CompoundFile<std::fs::File>) -> Result<bool, String> {
@@ -58,11 +92,50 @@ fn is_compressed(comp: &mut cfb::CompoundFile<std::fs::File>) -> Result<bool, St
 }
 
 fn inflate(bytes: &[u8]) -> Result<Vec<u8>, String> {
-    let mut decoder = DeflateDecoder::new(bytes);
-    let mut out = Vec::new();
-    decoder
-        .read_to_end(&mut out)
-        .map_err(|e| format!("hwp 압축 해제 실패: {}", e))?;
+    // HWP 5.0 본문은 보통 raw deflate. 일부 변형은 zlib wrapper(0x78 ...) 사용.
+    // 둘 다 시도하고, 도중에 깨져도 그때까지 풀린 만큼은 반환한다.
+    let is_zlib = bytes.len() >= 2 && bytes[0] == 0x78;
+
+    fn drain<R: std::io::Read>(reader: &mut R) -> (Vec<u8>, Option<String>) {
+        let mut out = Vec::new();
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => return (out, None),
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) => return (out, Some(e.to_string())),
+            }
+        }
+    }
+    let try_decode = |use_zlib: bool| -> (Vec<u8>, Option<String>) {
+        if use_zlib {
+            drain(&mut flate2::read::ZlibDecoder::new(bytes))
+        } else {
+            drain(&mut DeflateDecoder::new(bytes))
+        }
+    };
+
+    // 1) 헤더로 추정한 방식 먼저 시도
+    let (mut out, err1) = try_decode(is_zlib);
+    if err1.is_none() {
+        return Ok(out);
+    }
+    // 2) 반대 방식으로 재시도
+    let (out2, err2) = try_decode(!is_zlib);
+    if err2.is_none() {
+        return Ok(out2);
+    }
+    // 둘 다 도중에 깨진 경우 — 더 많이 풀린 쪽을 부분 결과로 반환
+    if out2.len() > out.len() {
+        out = out2;
+    }
+    if out.is_empty() {
+        return Err(format!(
+            "hwp 압축 해제 실패: {}",
+            err1.unwrap_or_else(|| err2.unwrap_or_default())
+        ));
+    }
+    // 부분 추출이라도 반환
     Ok(out)
 }
 

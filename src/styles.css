@@ -46,9 +46,55 @@ body.theme-dark {
   color-scheme: dark;
 }
 
-/* github-markdown-css도 강제 테마 따라가게 */
-body.theme-dark .markdown-body { color-scheme: dark; }
-body.theme-light .markdown-body { color-scheme: light; }
+/* github-markdown-css가 자체 CSS 변수로 색을 결정하므로,
+   강제 토글 시 변수를 우리 토큰으로 덮어쓰지 않으면 시스템 테마가 적용되어
+   배경/글자 색이 어긋난다. */
+body.theme-dark .markdown-body {
+  color-scheme: dark;
+  /* old Primer (--color-*) */
+  --color-canvas-default: var(--bg);
+  --color-canvas-subtle: var(--sidebar-bg);
+  --color-fg-default: var(--fg);
+  --color-fg-muted: var(--fg);
+  --color-fg-subtle: var(--muted);
+  --color-border-default: var(--border);
+  --color-border-muted: var(--border);
+  --color-accent-fg: var(--accent);
+  --color-accent-emphasis: var(--accent);
+  --color-neutral-muted: var(--hover);
+  /* new Primer (--bgColor-*, --fgColor-*, --borderColor-*) — github-markdown-css 5.x */
+  --bgColor-default: var(--bg);
+  --bgColor-muted: var(--sidebar-bg);
+  --bgColor-neutral-muted: var(--hover);
+  --fgColor-default: var(--fg);
+  --fgColor-muted: var(--fg);
+  --fgColor-accent: var(--accent);
+  --borderColor-default: var(--border);
+  --borderColor-muted: var(--border);
+  color: var(--fg);
+}
+body.theme-light .markdown-body {
+  color-scheme: light;
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f6f8fa;
+  --color-fg-default: #1f2328;
+  --color-fg-muted: #1f2328;
+  --color-fg-subtle: #6e7781;
+  --color-border-default: #d0d7de;
+  --color-border-muted: #d8dee4;
+  --color-accent-fg: #0969da;
+  --color-accent-emphasis: #0969da;
+  --color-neutral-muted: #eaeef2;
+  --bgColor-default: #ffffff;
+  --bgColor-muted: #f6f8fa;
+  --bgColor-neutral-muted: #eaeef2;
+  --fgColor-default: #1f2328;
+  --fgColor-muted: #1f2328;
+  --fgColor-accent: #0969da;
+  --borderColor-default: #d0d7de;
+  --borderColor-muted: #d8dee4;
+  color: var(--fg);
+}
 
 * { box-sizing: border-box; }
 html, body {
@@ -210,7 +256,60 @@ button.ghost:hover { background: var(--hover); border-color: var(--border); }
 
 .markdown-body { background: transparent !important; color: var(--fg); }
 
+/* hwpx 본문 영역 — 라이트 배경 강제(워드/한컴/구글닥스 패턴) */
+.hwpx-doc {
+  background: #ffffff;
+  color: #1f2328;
+  color-scheme: light;
+  padding: 24px 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  /* 원본 서식이 한눈에 들어오게 페이지 폭 살짝 제한 */
+  max-width: 920px;
+  margin: 0 auto;
+  font-family: "맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo",
+    "Noto Sans KR", sans-serif;
+  line-height: 1.55;
+}
+/* 강제: hwpx-doc 안 모든 글자는 항상 어두운 검정 (다크 모드 토글 영향 X)
+   inline `color:` 가 박힌 노드는 자기 색을 그대로 갖되, 미지정 노드는 #1f2328. */
+.hwpx-doc,
+.hwpx-doc p,
+.hwpx-doc span,
+.hwpx-doc strong,
+.hwpx-doc em,
+.hwpx-doc td,
+.hwpx-doc th,
+.hwpx-doc div,
+.hwpx-doc li,
+.hwpx-doc h1, .hwpx-doc h2, .hwpx-doc h3,
+.hwpx-doc h4, .hwpx-doc h5, .hwpx-doc h6 {
+  color: #1f2328;
+}
+/* hwpx 표 — 한컴 출력과 비슷한 얇은 회색 테두리 */
+.hwpx-doc table.hwpx-table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: auto;
+  max-width: 100%;
+  display: table;
+}
+.hwpx-doc table.hwpx-table tr,
+.hwpx-doc table.hwpx-table tr:nth-child(2n) {
+  background-color: transparent;
+}
+.hwpx-doc table.hwpx-table td,
+.hwpx-doc table.hwpx-table th {
+  border: 1px solid #bbbbbb;
+  padding: 6px 10px;
+  vertical-align: top;
+}
+.hwpx-doc p { margin: 0.35em 0; }
+.hwpx-doc img { max-width: 100%; height: auto; }
+.hwpx-doc table.hwpx-table span[style*="font-size"] { line-height: 1.4; }
+
 .viewer.plain pre {
+  color: var(--fg);
   background: var(--sidebar-bg);
   border: 1px solid var(--border);
   padding: 16px;

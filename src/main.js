@@ -101,6 +101,9 @@ function friendlyError(err, path) {
   if (/password|encrypted/i.test(msg)) {
     return `비밀번호로 보호된 문서는 지원되지 않습니다.\n파일: ${path}`;
   }
+  if (/deflate|압축 해제 실패|Section 스트림/i.test(msg)) {
+    return `이 .hwp 파일은 마이두 뷰어의 현재 hwp 파서로는 본문을 추출하지 못하는 변형입니다. 한컴오피스에서 열거나, .hwpx 로 변환 후 다시 시도해 주세요. (개인 보유 hwp 일부에서 발생 — v0.3 에서 다른 hwp 파서로 도전 예정입니다.)\n\n파일: ${path}`;
+  }
   if (/Unsupported file/i.test(msg)) {
     return `지원하지 않는 확장자입니다.\n파일: ${path}`;
   }
@@ -140,12 +143,36 @@ function renderFile(file) {
     return;
   }
   if (kind === "hwpx") {
-    // sidecar(hwpxjs)가 만든 HTML을 그대로 렌더 — 표·서식 보존
-    viewer.innerHTML = DOMPurify.sanitize(content, {
+    // hwpx는 표준 포맷 — 원본 서식(색·배경·이미지·폰트)을 풀로 살린다.
+    // 본문 영역은 항상 라이트(흰 배경 + 어두운 글자)로 강제해 hwpx 안 색이
+    // 다크 셸과 충돌하지 않게 한다 (워드/한컴/구글닥스 패턴).
+    const sanitized = DOMPurify.sanitize(content, {
       ADD_ATTR: ["target"],
       FORBID_TAGS: ["script", "iframe", "object", "embed", "link"],
       FORBID_ATTR: ["onerror", "onload", "onclick"],
     });
+    const tmp = document.createElement("div");
+    tmp.innerHTML = sanitized;
+
+    // hwpx 가 만드는 빈 단락/빈 셀/빈 행 정리 (시각적 공백 누적 방지) —
+    // 색이나 인라인 스타일은 건드리지 않는다.
+    const hasContent = (el) =>
+      !!el.textContent.trim() || !!el.querySelector("img");
+    tmp.querySelectorAll("p").forEach((p) => {
+      if (!hasContent(p)) p.remove();
+    });
+    tmp.querySelectorAll("tr").forEach((tr) => {
+      const cells = Array.from(tr.children);
+      if (cells.length > 0 && cells.every((c) => !hasContent(c))) {
+        tr.remove();
+      }
+    });
+    tmp.querySelectorAll("td, th").forEach((c) => {
+      if (!hasContent(c)) c.innerHTML = "&nbsp;";
+    });
+
+    // hwpx 본문 컨테이너로 감싸 라이트 배경 영역으로 명확히 격리
+    viewer.innerHTML = `<div class="hwpx-doc">${tmp.innerHTML}</div>`;
     return;
   }
   if (kind === "hwp") {

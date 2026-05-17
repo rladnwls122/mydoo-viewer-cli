@@ -1,6 +1,6 @@
 [package]
 name = "mydoo-viewer"
-version = "0.1.0"
+version = "0.2.1"
 description = "Light document viewer in the mydoo family — md, html, txt, docx, hwp, hwpx"
 authors = ["mydoo"]
 edition = "2021"

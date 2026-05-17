@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ssabrojs/hwpxjs": "*",
+    "jszip": "^3.10.1",
     "node-hwp": "*"
   }
 }

@@ -9,6 +9,17 @@ import { extname } from "node:path";
 // 정적 import — Bun compile이 의존 모듈을 단일 실행파일에 묶기 위해 필수
 import { HwpxReader } from "@ssabrojs/hwpxjs";
 import nodeHwp from "node-hwp";
+import JSZip from "jszip";
+
+const MIME_BY_EXT = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  bmp: "image/bmp",
+  svg: "image/svg+xml",
+  webp: "image/webp",
+};
 
 async function parseHwpx(filePath) {
   const buffer = await readFile(filePath);
@@ -27,6 +38,32 @@ async function parseHwpx(filePath) {
   } catch {
     html = "";
   }
+
+  // BinData/*.{jpg,png,...} 이미지를 base64 data URI로 인라인 — 깨진 src 정상화
+  if (html.includes("BinData/")) {
+    try {
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      const images = {};
+      await Promise.all(
+        Object.keys(zip.files)
+          .filter((p) => p.startsWith("BinData/"))
+          .map(async (p) => {
+            const ext = (p.split(".").pop() || "").toLowerCase();
+            const mime = MIME_BY_EXT[ext];
+            if (!mime) return;
+            const data = await zip.files[p].async("base64");
+            images[p] = `data:${mime};base64,${data}`;
+          }),
+      );
+      html = html.replace(
+        /src="(BinData\/[^"]+)"/g,
+        (_, p) => `src="${images[p] || p}"`,
+      );
+    } catch {
+      // 이미지 추출 실패해도 텍스트 렌더는 계속
+    }
+  }
+
   return { kind: "html", html, text };
 }
 

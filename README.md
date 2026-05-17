@@ -50,11 +50,11 @@ MIT 라이선스로 공개되어 있으니 마음껏 활용해 주십시오. 추
 | `.html`, `.htm` | Sanitized via DOMPurify (scripts and iframes blocked) |
 | `.txt` | Monospace plain text |
 | `.docx` | Converted to HTML via mammoth.js |
-| `.hwpx` | Text extraction via Rust ZIP + quick-xml (OWPML) |
-| `.hwp` | Text extraction via Rust CFB + HWP 5.0 records |
+| `.hwpx` | Rich HTML via `@ssabrojs/hwpxjs` (tables, font sizes, paragraphs preserved) — bundled as a Bun-compiled sidecar |
+| `.hwp` | Text extraction via Rust CFB + HWP 5.0 records (rich formatting deferred to v0.3) |
 
-> v1 focuses on **content viewing**. Rich formatting, images, and tables for `.docx` / `.hwp` / `.hwpx` are scheduled for v2.
-> v1은 "내용 확인용"이 목표이며, `.docx` / `.hwp` / `.hwpx` 의 정밀 서식·이미지·표는 v2에서 확장될 예정입니다.
+> Embedded images inside `.hwpx` reference `BinData/*` inside the archive; surfacing them is scheduled for v0.2.x.
+> `.hwpx` 안의 첨부 이미지는 아카이브 내부 `BinData/*` 를 참조합니다. 이미지 표시는 v0.2.x 에서 보강 예정입니다.
 
 ---
 
@@ -67,14 +67,16 @@ Get the latest installer from the [Releases page](https://github.com/kocoredisk/
 
 ## Features · 기능
 
-- Sidebar file explorer — only document files (`.md / .html / .txt / .docx / .hwp / .hwpx`) are shown.
+- Sidebar file explorer — only document files (`.md / .html / .txt / .docx / .hwp / .hwpx`) are shown. Resizable handle on the right edge.
 - GitHub-style rendering for Markdown and HTML.
+- Rich `.hwpx` rendering (tables, fonts, paragraphs) via embedded sidecar.
 - Automatic system dark / light theme, with a manual toggle (persisted via `localStorage`).
 - Windows file associations — installed extensions open directly via double-click.
 - Keyboard shortcut: `Ctrl + B` to toggle the sidebar.
 
-- 사이드바 파일 탐색기 — 문서 파일(`.md / .html / .txt / .docx / .hwp / .hwpx`)만 노출됩니다.
+- 사이드바 파일 탐색기 — 문서 파일(`.md / .html / .txt / .docx / .hwp / .hwpx`)만 노출됩니다. 우측 가장자리를 드래그해 폭을 조절할 수 있습니다.
 - 마크다운·HTML을 GitHub 스타일로 렌더링합니다.
+- `.hwpx` 는 내장 sidecar로 표·폰트·단락까지 살려 렌더링합니다.
 - 시스템 다크/라이트 테마 자동 + 수동 토글(상태는 `localStorage`에 저장됩니다).
 - 윈도우 파일 연결 — 설치 시 위 확장자들은 더블클릭으로 바로 열립니다.
 - 단축키: `Ctrl + B` — 사이드바 토글.
@@ -84,15 +86,19 @@ Get the latest installer from the [Releases page](https://github.com/kocoredisk/
 ## Build from source · 직접 빌드
 
 ```bash
-# Prerequisite: Rust toolchain + Tauri CLI
+# Prerequisite: Rust toolchain + Tauri CLI + Bun (for the sidecar)
 winget install Rustlang.Rustup
+winget install Oven-sh.Bun
 cargo install tauri-cli --version "^2.0" --locked
 
-# Run in dev mode
-cd src-tauri && cargo tauri dev
+# Build the Node sidecar (hwp/hwpx parser) — produces ~99MB single exe
+cd sidecar
+bun install
+bun build --compile parser.mjs --outfile mydoo-parser.exe
+cp mydoo-parser.exe ../src-tauri/binaries/mydoo-parser-x86_64-pc-windows-msvc.exe
 
-# Build release (installer + standalone exe)
-cd src-tauri && cargo tauri build
+# Build the Tauri app (installer bundles the sidecar via externalBin)
+cd ../src-tauri && cargo tauri build
 ```
 
 Artifact: `src-tauri/target/release/bundle/nsis/Mydoo Viewer_<version>_x64-setup.exe`

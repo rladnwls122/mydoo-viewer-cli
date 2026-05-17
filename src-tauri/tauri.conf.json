@@ -29,6 +29,7 @@
     "active": true,
     "targets": ["nsis"],
     "icon": ["icons/icon.ico"],
+    "externalBin": ["binaries/mydoo-parser"],
     "shortDescription": "마이두 패밀리의 가벼운 문서 뷰어",
     "longDescription": "Markdown / HTML / Text 파일을 깃 스타일로 한 창에 띄우는 가벼운 뷰어. 좌측 사이드바에서 폴더를 열어 .md / .html / .txt 파일만 트리로 본다.",
     "fileAssociations": [

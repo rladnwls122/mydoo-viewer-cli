@@ -5,6 +5,12 @@
   "windows": ["*"],
   "permissions": [
     "core:default",
-    "dialog:default"
+    "dialog:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "binaries/mydoo-parser", "sidecar": true, "args": [{ "validator": "\\S+" }] }
+      ]
+    }
   ]
 }

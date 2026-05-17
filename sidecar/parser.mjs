@@ -1,21 +1,21 @@
 // Mydoo Viewer Node sidecar — hwp / hwpx parsing
 //
 // Usage: node parser.mjs <file-path>
-// Output (stdout): JSON { kind: "html", content: "<html>...</html>", text: "..." }
+// Output (stdout): JSON { kind: "html", html: "...", text: "..." }
 // Errors → stderr + exit 1
 
-import { readFile, writeFile, unlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, extname } from "node:path";
-import { randomBytes } from "node:crypto";
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
+import { readFile } from "node:fs/promises";
+import { extname } from "node:path";
+// 정적 import — Bun compile이 의존 모듈을 단일 실행파일에 묶기 위해 필수
+import { HwpxReader } from "@ssabrojs/hwpxjs";
+import nodeHwp from "node-hwp";
 
 async function parseHwpx(filePath) {
-  const { HwpxReader } = await import("@ssabrojs/hwpxjs");
   const buffer = await readFile(filePath);
-  const arrayBuffer = new Uint8Array(buffer).buffer;
+  // Buffer pool의 underlying ArrayBuffer는 파일보다 커서 ZIP 디코더가 EOCD를
+  // 잘못 찾음 → 정확한 크기의 ArrayBuffer로 복사한다.
+  const arrayBuffer = new ArrayBuffer(buffer.byteLength);
+  new Uint8Array(arrayBuffer).set(buffer);
 
   const reader = new HwpxReader();
   await reader.loadFromArrayBuffer(arrayBuffer);
@@ -27,13 +27,10 @@ async function parseHwpx(filePath) {
   } catch {
     html = "";
   }
-
   return { kind: "html", html, text };
 }
 
 async function parseHwp(filePath) {
-  // node-hwp는 임시 파일 경로 필요. 원본 경로 그대로 넘긴다.
-  const nodeHwp = require("node-hwp");
   const doc = await new Promise((resolve, reject) => {
     nodeHwp.open(filePath, { type: "hwp" }, (err, d) => {
       if (err) reject(err);
@@ -49,7 +46,6 @@ async function parseHwp(filePath) {
   } catch {
     text = "";
   }
-
   return { kind: "text", html: "", text };
 }
 
@@ -82,12 +78,9 @@ async function main() {
       console.error(`unsupported extension: ${ext}`);
       process.exit(1);
     }
-
-    // html이 비어 있고 text가 있으면 fallback html 생성
     if (!result.html && result.text) {
       result.html = textToHtml(result.text);
     }
-
     process.stdout.write(JSON.stringify(result));
   } catch (err) {
     console.error(err?.message || String(err));

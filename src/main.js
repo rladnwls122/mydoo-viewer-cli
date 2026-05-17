@@ -89,8 +89,22 @@ async function openFile(path) {
     const file = await invoke("read_file", { path });
     renderFile(file);
   } catch (err) {
-    showError(`파일을 열 수 없음: ${err}`);
+    showError(friendlyError(err, path));
   }
+}
+
+function friendlyError(err, path) {
+  const msg = String(err);
+  if (/Corrupted zip|End of data reached/i.test(msg)) {
+    return `이 파일은 컨테이너가 손상되어 열 수 없습니다. (원본이 손상되었거나 전송 중 잘려진 가능성)\n파일: ${path}`;
+  }
+  if (/password|encrypted/i.test(msg)) {
+    return `비밀번호로 보호된 문서는 지원되지 않습니다.\n파일: ${path}`;
+  }
+  if (/Unsupported file/i.test(msg)) {
+    return `지원하지 않는 확장자입니다.\n파일: ${path}`;
+  }
+  return `파일을 열 수 없음: ${msg}`;
 }
 
 function renderFile(file) {
@@ -125,7 +139,17 @@ function renderFile(file) {
     }).catch((e) => showError(`docx 변환 실패: ${e}`));
     return;
   }
-  if (kind === "hwp" || kind === "hwpx") {
+  if (kind === "hwpx") {
+    // sidecar(hwpxjs)가 만든 HTML을 그대로 렌더 — 표·서식 보존
+    viewer.innerHTML = DOMPurify.sanitize(content, {
+      ADD_ATTR: ["target"],
+      FORBID_TAGS: ["script", "iframe", "object", "embed", "link"],
+      FORBID_ATTR: ["onerror", "onload", "onclick"],
+    });
+    return;
+  }
+  if (kind === "hwp") {
+    // hwp 구형: Rust 텍스트 추출 결과를 모노스페이스로 (서식 v0.3에서 보강)
     viewer.classList.add("plain");
     viewer.innerHTML = "";
     const pre = document.createElement("pre");
@@ -195,6 +219,40 @@ $("#btn-up").addEventListener("click", async () => {
   if (parent && parent !== currentDir) loadDir(parent);
   else loadDrives();
 });
+
+// 사이드바 리사이즈 핸들
+const MIN_W = 160;
+const MAX_W = 600;
+const savedW = parseInt(localStorage.getItem("sidebar-w") || "", 10);
+if (savedW >= MIN_W && savedW <= MAX_W) {
+  document.documentElement.style.setProperty("--sidebar-w", `${savedW}px`);
+}
+{
+  const handle = $("#resize-handle");
+  let dragging = false;
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    dragging = true;
+    handle.classList.add("dragging");
+    document.body.classList.add("resizing");
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const w = Math.min(MAX_W, Math.max(MIN_W, e.clientX));
+    document.documentElement.style.setProperty("--sidebar-w", `${w}px`);
+  });
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove("dragging");
+    document.body.classList.remove("resizing");
+    const w = parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue("--sidebar-w"),
+      10,
+    );
+    if (w >= MIN_W && w <= MAX_W) localStorage.setItem("sidebar-w", String(w));
+  });
+}
 
 // 테마 토글
 function currentTheme() {

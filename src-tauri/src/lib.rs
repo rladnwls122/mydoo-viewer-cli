@@ -108,7 +108,7 @@ fn home_dir() -> Option<String> {
 }
 
 #[tauri::command]
-fn read_file(path: String) -> Result<OpenedFile, String> {
+async fn read_file(app: tauri::AppHandle, path: String) -> Result<OpenedFile, String> {
     let p = PathBuf::from(&path);
     let kind = ext_kind(&p).ok_or_else(|| format!("Unsupported file: {}", path))?;
     match kind {
@@ -132,11 +132,11 @@ fn read_file(path: String) -> Result<OpenedFile, String> {
             })
         }
         "hwpx" => {
-            let text = crate::hwpx::extract_text(&p).map_err(|e| e.to_string())?;
+            let html = call_hwp_sidecar(&app, &path).await?;
             Ok(OpenedFile {
                 path: path.clone(),
-                kind: "hwpx".into(),
-                content: text,
+                kind: kind.to_string(),
+                content: html,
             })
         }
         "hwp" => {
@@ -149,6 +149,35 @@ fn read_file(path: String) -> Result<OpenedFile, String> {
         }
         _ => Err("Unsupported".into()),
     }
+}
+
+async fn call_hwp_sidecar(app: &tauri::AppHandle, file_path: &str) -> Result<String, String> {
+    use tauri_plugin_shell::ShellExt;
+    let cmd = app
+        .shell()
+        .sidecar("mydoo-parser")
+        .map_err(|e| format!("sidecar 위치 실패: {}", e))?
+        .args([file_path]);
+    let output = cmd
+        .output()
+        .await
+        .map_err(|e| format!("sidecar 실행 실패: {}", e))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("parser exit {:?}: {}", output.status.code(), stderr));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let parsed: serde_json::Value = serde_json::from_str(&stdout)
+        .map_err(|e| format!("parser JSON 디코드 실패: {}", e))?;
+    let html = parsed
+        .get("html")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    if !html.is_empty() {
+        return Ok(html.to_string());
+    }
+    let text = parsed.get("text").and_then(|v| v.as_str()).unwrap_or("");
+    Ok(format!("<pre>{}</pre>", text.replace('<', "&lt;").replace('>', "&gt;")))
 }
 
 fn decode_text(bytes: &[u8]) -> String {
@@ -219,7 +248,8 @@ fn initial_file(app: tauri::AppHandle) -> Option<String> {
 
 struct InitialArg(std::sync::Mutex<Option<String>>);
 
-mod hwpx;
+// hwpx는 Node sidecar(mydoo-parser, hwpxjs)가 처리하고,
+// hwp(구형)는 Rust 자체 텍스트 추출로 처리한다 (node-hwp가 Bun 런타임 호환 이슈).
 mod hwp;
 
 pub fn run() {
@@ -237,6 +267,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(InitialArg(std::sync::Mutex::new(initial)))
         .invoke_handler(tauri::generate_handler![
             list_dir,

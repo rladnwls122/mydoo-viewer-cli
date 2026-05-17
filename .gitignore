@@ -8,6 +8,10 @@ Cargo.lock
 node_modules/
 dist/
 
+# Sidecar build artifacts (99MB Bun-compiled exe) — built locally with `bun build --compile`
+sidecar/mydoo-parser.exe
+src-tauri/binaries/
+
 # OS
 .DS_Store
 Thumbs.db

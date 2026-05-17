@@ -63,7 +63,7 @@ html, body {
 
 body {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: var(--sidebar-w, 260px) 1fr;
   grid-template-rows: 100vh;
 }
 
@@ -73,6 +73,7 @@ body.no-sidebar {
 body.no-sidebar #sidebar { display: none; }
 
 #sidebar {
+  position: relative;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   display: flex;
@@ -80,6 +81,25 @@ body.no-sidebar #sidebar { display: none; }
   overflow: hidden;
   user-select: none;
 }
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: var(--accent);
+  opacity: 0.4;
+}
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing iframe, body.resizing #viewer { pointer-events: none; }
 
 .sidebar-head {
   display: flex;
@@ -209,4 +229,38 @@ button.ghost:hover { background: var(--hover); border-color: var(--border); }
   border-radius: 6px;
   border: 1px solid #d1242f55;
   margin: 12px 0;
+}
+
+/* 스크롤바 — 얇고 보일 듯 말 듯 */
+.tree,
+#viewer {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.tree:hover,
+#viewer:hover {
+  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+}
+.tree::-webkit-scrollbar,
+#viewer::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.tree::-webkit-scrollbar-track,
+#viewer::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tree::-webkit-scrollbar-thumb,
+#viewer::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 150ms ease;
+}
+.tree:hover::-webkit-scrollbar-thumb,
+#viewer:hover::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+}
+.tree::-webkit-scrollbar-thumb:hover,
+#viewer::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.55);
 }

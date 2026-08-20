@@ -75,30 +75,16 @@ fn parent_dir(path: String) -> Option<String> {
 }
 
 #[tauri::command]
-fn list_drives() -> Vec<Entry> {
-    let mut out = Vec::new();
+fn open_in_explorer(path: String) -> Result<(), String> {
     #[cfg(windows)]
-    {
-        for letter in b'A'..=b'Z' {
-            let p = format!("{}:\\", letter as char);
-            if std::path::Path::new(&p).is_dir() {
-                out.push(Entry {
-                    name: format!("{}:", letter as char),
-                    path: p,
-                    is_dir: true,
-                });
-            }
-        }
-    }
+    let program = "explorer";
     #[cfg(not(windows))]
-    {
-        out.push(Entry {
-            name: "/".into(),
-            path: "/".into(),
-            is_dir: true,
-        });
-    }
-    out
+    let program = "xdg-open";
+    std::process::Command::new(program)
+        .arg(&path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -283,7 +269,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_dir,
             parent_dir,
-            list_drives,
+            open_in_explorer,
             home_dir,
             read_file,
             open_file_dialog,

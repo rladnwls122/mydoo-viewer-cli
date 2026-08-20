@@ -166,6 +166,19 @@ body.resizing iframe, body.resizing #viewer { pointer-events: none; }
   direction: rtl;
   text-align: left;
 }
+input.path {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  outline: none;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+input.path:focus {
+  direction: ltr;
+  color: var(--fg);
+}
 
 .tree {
   list-style: none;

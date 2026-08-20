@@ -56,24 +56,20 @@ function renderTree(entries) {
   }
 }
 
-async function loadDir(dir) {
+// 뒤로가기 히스토리 — 상위(⬆)·트리 이동·경로 입력이 쌓고 ◀ 가 꺼낸다.
+const dirHistory = [];
+
+async function loadDir(dir, fromBack = false) {
   try {
     const entries = await invoke("list_dir", { path: dir });
+    if (!fromBack && currentDir && currentDir !== dir) dirHistory.push(currentDir);
     currentDir = dir;
-    sidebarPath.textContent = dir;
+    sidebarPath.value = dir;
     sidebarPath.title = dir;
     renderTree(entries);
   } catch (err) {
     showError(`폴더를 읽을 수 없음: ${err}`);
   }
-}
-
-async function loadDrives() {
-  const drives = await invoke("list_drives");
-  currentDir = null;
-  sidebarPath.textContent = "내 PC";
-  sidebarPath.title = "";
-  renderTree(drives);
 }
 
 function markActive(li) {
@@ -222,7 +218,6 @@ async function openSidebarWithDefault() {
   if (!currentDir) {
     const home = await invoke("home_dir");
     if (home) await loadDir(home);
-    else await loadDrives();
   }
 }
 
@@ -233,18 +228,38 @@ $("#btn-toggle-sidebar").addEventListener("click", async () => {
 });
 
 // 사이드바 내부 버튼
-$("#btn-home").addEventListener("click", async () => {
-  const home = await invoke("home_dir");
-  if (home) loadDir(home);
+$("#btn-back").addEventListener("click", () => {
+  const prev = dirHistory.pop();
+  if (prev) loadDir(prev, true);
 });
-
-$("#btn-drives").addEventListener("click", () => loadDrives());
 
 $("#btn-up").addEventListener("click", async () => {
   if (!currentDir) return;
   const parent = await invoke("parent_dir", { path: currentDir });
   if (parent && parent !== currentDir) loadDir(parent);
-  else loadDrives();
+});
+
+$("#btn-explorer").addEventListener("click", () => {
+  if (currentDir) invoke("open_in_explorer", { path: currentDir });
+});
+
+// 경로 입력 — Enter 로 디렉터리를 열고, 파일 경로면 파일을 연다.
+sidebarPath.addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+  const p = sidebarPath.value.trim();
+  if (!p) return;
+  try {
+    await invoke("list_dir", { path: p });
+    await loadDir(p);
+  } catch {
+    await openFile(p);
+    if (currentDir) sidebarPath.value = currentDir;
+  }
+  sidebarPath.blur();
+});
+// 편집을 취소하면 현재 경로로 되돌린다.
+sidebarPath.addEventListener("blur", () => {
+  if (currentDir) sidebarPath.value = currentDir;
 });
 
 // 사이드바 리사이즈 핸들

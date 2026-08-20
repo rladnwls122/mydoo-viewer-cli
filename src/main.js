@@ -310,14 +310,19 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// 시작: 더블클릭으로 들어온 파일이 있으면 그 부모를 사이드바에 띄우고 파일 연다 (사이드바 자동 펼침)
+// 시작: CLI/더블클릭 인자 — 디렉터리면 그 디렉터리를 사이드바에 띄우고,
+// 파일이면 부모를 띄운 뒤 파일을 연다 (사이드바 자동 펼침)
 (async () => {
   const initial = await invoke("initial_file");
   if (initial) {
     document.body.classList.remove("no-sidebar");
-    const parent = await invoke("parent_dir", { path: initial });
-    if (parent) await loadDir(parent);
-    await openFile(initial);
-    highlightInTree(initial);
+    if (initial.is_dir) {
+      await loadDir(initial.path);
+    } else {
+      const parent = await invoke("parent_dir", { path: initial.path });
+      if (parent) await loadDir(parent);
+      await openFile(initial.path);
+      highlightInTree(initial.path);
+    }
   }
 })();

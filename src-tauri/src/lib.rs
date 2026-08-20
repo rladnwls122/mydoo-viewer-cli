@@ -48,7 +48,8 @@ fn list_dir(path: String) -> Result<Vec<Entry>, String> {
         }
         let is_dir = p.is_dir();
         if !is_dir {
-            if ext_kind(&p).is_none() {
+            // 사이드바에는 마크다운만 노출 — 다른 포맷은 파일 연결/CLI 인자로만 연다.
+            if ext_kind(&p) != Some("markdown") {
                 continue;
             }
         }
@@ -240,29 +241,39 @@ async fn open_dir_dialog(app: tauri::AppHandle) -> Option<String> {
         .and_then(|p| p.into_path().ok().map(|pb| pb.to_string_lossy().to_string()))
 }
 
+#[derive(Serialize, Clone)]
+struct InitialPath {
+    path: String,
+    is_dir: bool,
+}
+
 #[tauri::command]
-fn initial_file(app: tauri::AppHandle) -> Option<String> {
+fn initial_file(app: tauri::AppHandle) -> Option<InitialPath> {
     let state = app.state::<InitialArg>();
     state.0.lock().ok().and_then(|g| g.clone())
 }
 
-struct InitialArg(std::sync::Mutex<Option<String>>);
+struct InitialArg(std::sync::Mutex<Option<InitialPath>>);
 
 // hwpx는 Node sidecar(mydoo-parser, hwpxjs)가 처리하고,
 // hwp(구형)는 Rust 자체 텍스트 추출로 처리한다 (node-hwp가 Bun 런타임 호환 이슈).
 mod hwp;
 
 pub fn run() {
+    // 'mdv .' 같은 상대 경로는 런처의 cwd 기준으로 절대화한다. canonicalize 가 붙이는
+    // Windows \\?\ 접두사는 표시용 경로에서 떼어낸다.
     let initial = std::env::args()
         .skip(1)
         .find(|a| !a.starts_with("--"))
         .and_then(|p| {
-            let pb = PathBuf::from(&p);
-            if pb.exists() && ext_kind(&pb).is_some() {
-                Some(pb.to_string_lossy().to_string())
-            } else {
-                None
+            let pb = std::fs::canonicalize(&p).ok()?;
+            let is_dir = pb.is_dir();
+            if !is_dir && ext_kind(&pb).is_none() {
+                return None;
             }
+            let s = pb.to_string_lossy().to_string();
+            let s = s.strip_prefix(r"\\?\").unwrap_or(&s).to_string();
+            Some(InitialPath { path: s, is_dir })
         });
 
     tauri::Builder::default()

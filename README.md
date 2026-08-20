@@ -1,4 +1,4 @@
-# Mydoo Viewer
+# Mydoo Viewer For ClI 
 
 > A lightweight universal document viewer for `.md` · `.html` · `.txt` · `.docx` · `.hwp` · `.hwpx`.
 
